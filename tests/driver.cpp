@@ -28,13 +28,26 @@ static void event(obs_frontend_event event, void *) {
     obs_source_release(source);
     obs_data_release(settings);
     obs_scene_release(scene);
+    if (qEnvironmentVariable("POSTPROJECT_OBS_TEST_MODE") == "recording-failure") {
+      auto *acknowledge = new QTimer(qApp);
+      QObject::connect(acknowledge, &QTimer::timeout, [] {
+        for (auto *widget : QApplication::topLevelWidgets()) {
+          if (auto *box = qobject_cast<QMessageBox *>(widget))
+            box->accept();
+        }
+      });
+      acknowledge->start(100);
+    }
     QTimer::singleShot(1000, [] { obs_frontend_recording_start(); });
   } else if (event == OBS_FRONTEND_EVENT_RECORDING_STARTED) {
     if (qEnvironmentVariable("POSTPROJECT_OBS_TEST_MODE") == "failure") {
       const auto path = qEnvironmentVariable("POSTPROJECT_OBS_PRODUCTION");
       QFile::rename(path, path + ".offline");
     }
-    QTimer::singleShot(1500, [] { obs_frontend_recording_stop(); });
+    QTimer::singleShot(
+        qEnvironmentVariable("POSTPROJECT_OBS_TEST_MODE") == "recording-failure"
+            ? 5000 : 1500,
+        [] { obs_frontend_recording_stop(); });
   } else if (event == OBS_FRONTEND_EVENT_RECORDING_STOPPED) {
     const auto mode = qEnvironmentVariable("POSTPROJECT_OBS_TEST_MODE");
     blog(LOG_INFO, "[Driver] Stopped; test mode=%s", mode.toUtf8().constData());

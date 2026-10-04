@@ -3,7 +3,9 @@
 import argparse
 import os
 import shutil
+import signal
 import subprocess
+import time
 from pathlib import Path
 
 from postproject import Production, RepresentationAvailability
@@ -18,6 +20,7 @@ parser.add_argument(
         "normal",
         "retry",
         "failure",
+        "recording-failure",
         "shutdown",
         "no-plugin",
         "no-library",
@@ -74,7 +77,7 @@ with (root / "xvfb.log").open("w") as xlog:
     try:
         environment["DISPLAY"] = ":" + display.stdout.readline().strip()
         with (root / "obs.log").open("w") as log:
-            subprocess.run(
+            process = subprocess.Popen(
                 [
                     "obs",
                     "--multi",
@@ -86,18 +89,61 @@ with (root / "xvfb.log").open("w") as xlog:
                 env=environment,
                 stdout=log,
                 stderr=subprocess.STDOUT,
-                timeout=45,
-                check=True,
             )
+            try:
+                if args.mode == "recording-failure":
+                    # Terminate the real recording muxer after it opens media.
+                    # Observe the real host completion and output validation.
+                    deadline = time.monotonic() + 20
+                    while time.monotonic() < deadline:
+                        children = set()
+                        for task in Path(f"/proc/{process.pid}/task").glob("*"):
+                            try:
+                                children.update((task / "children").read_text().split())
+                            except FileNotFoundError:
+                                continue  # A host thread finished during inspection.
+                        muxers = [
+                            int(pid)
+                            for pid in children
+                            if "ffmpeg-mux" in Path(f"/proc/{pid}/exe").resolve().name
+                            and any(
+                                fd.resolve().parent == recordings
+                                for fd in Path(f"/proc/{pid}/fd").glob("*")
+                            )
+                        ]
+                        if muxers:
+                            os.kill(muxers[0], signal.SIGKILL)
+                            break
+                        if process.poll() is not None:
+                            raise RuntimeError("OBS exited before recording failure")
+                        time.sleep(0.01)
+                    else:
+                        raise RuntimeError("Recording muxer did not start")
+                assert process.wait(timeout=45) == 0
+            finally:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=5)
     finally:
         display.terminate()
         display.wait(timeout=5)
 files = list(recordings.glob("*.mkv"))
+log = (root / "obs.log").read_text()
+if args.mode == "recording-failure":
+    assert "Worker joined before frontend exit boundary" in log
+    assert "Recording validation failed" in log
+    assert "Recording registered successfully" not in log
+    with Production.open(
+        root / "shared.pproj", library_path=args.library
+    ) as production:
+        assert len(production.assets) == 0
+        assert production.latest_revision is None
+    print(f"OBS recording failure created no production media: {root}")
+    raise SystemExit(0)
 assert len(files) == 1, files
 subprocess.run(
     ["ffmpeg", "-v", "error", "-i", str(files[0]), "-f", "null", "-"], check=True
 )
-log = (root / "obs.log").read_text()
 if args.mode == "failure":
     assert "Registration failed; retry this attempt" in log
     (root / "shared.pproj.offline").rename(root / "shared.pproj")

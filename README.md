@@ -91,7 +91,12 @@ a genuine color-source recording through normal recording start/stop actions,
 fully decodes the file with FFmpeg and requires OBS exit status zero. Cases
 cover ordinary registration, the real retry menu, production loss after capture
 starts, close during registration, missing plugin, missing library and no chosen
-production. The dependency-loss case requires the RPATH-free build shown above.
+production. A separate recording-failure case terminates the runner's own muxer
+after it opens the recording. This pinned host still reports a successful stop
+for that aborted output; the worker's media validation rejects it and records
+no asset or activity. Recording validation and database registration failures
+have distinct diagnostics. No playback claim is made for the failed output.
+The dependency-loss case requires the RPATH-free build shown above.
 `tests/registration.c` reuses the actual C adapter for staging failure/rollback
 and repeated notification/lost acknowledgement. Contract traces are separate
 from real-host normal and failure traces.

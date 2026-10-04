@@ -17,6 +17,7 @@ for mode in (
     "normal",
     "retry",
     "failure",
+    "recording-failure",
     "shutdown",
     "no-plugin",
     "no-library",

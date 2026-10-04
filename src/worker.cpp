@@ -84,7 +84,7 @@ void Worker::run() {
 std::string Worker::process(const Attempt &attempt) {
   const auto path = QString::fromUtf8(attempt.path.c_str());
   if (!QFileInfo(path).isFile() || QFileInfo(path).size() == 0)
-    return "Registration failed: recording is absent or empty; file untouched";
+    return "Recording validation failed: recording is absent or empty; file untouched";
   QProcess probe;
   probe.start("ffprobe",
               {"-v", "error", "-select_streams", "v:0", "-show_entries",
@@ -93,11 +93,11 @@ std::string Worker::process(const Attempt &attempt) {
   if (!probe.waitForFinished(30000)) {
     probe.kill();
     probe.waitForFinished();
-    return "Registration failed: ffprobe unavailable or timed out; file "
+    return "Recording validation failed: ffprobe unavailable or timed out; file "
            "untouched";
   }
   if (probe.exitStatus() != QProcess::NormalExit || probe.exitCode() != 0)
-    return "Registration failed: output is not readable media; file untouched";
+    return "Recording validation failed: output is not readable media; file untouched";
   const auto root =
       QJsonDocument::fromJson(probe.readAllStandardOutput()).object();
   const auto streams = root["streams"].toArray();
@@ -105,13 +105,13 @@ std::string Worker::process(const Attempt &attempt) {
   if (streams.isEmpty() ||
       !format["format_name"].toString().contains("matroska") ||
       format["duration"].toString().toDouble() <= 0)
-    return "Registration failed: expected finalized Matroska video; file "
+    return "Recording validation failed: expected finalized Matroska video; file "
            "untouched";
   const auto video = streams.first().toObject();
   const auto width = video["width"].toInt();
   const auto height = video["height"].toInt();
   if (width <= 0 || height <= 0)
-    return "Registration failed: unknown video dimensions; file untouched";
+    return "Recording validation failed: unknown video dimensions; file untouched";
   {
     std::lock_guard<std::mutex> lock(mutex_);
     if (stopping_)
