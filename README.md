@@ -87,8 +87,9 @@ python tests/run.py /tmp/obs-evidence \
 ```
 
 The root must not exist. Each run uses isolated OBS settings and Xvfb, creates
-a genuine color-source recording through normal recording start/stop actions,
-fully decodes the file with FFmpeg and requires OBS exit status zero. Cases
+a genuine color-source recording through normal recording start/stop actions
+and requires OBS exit status zero. Successful recordings are fully decoded
+with FFmpeg. Cases
 cover ordinary registration, the real retry menu, production loss after capture
 starts, close during registration, missing plugin, missing library and no chosen
 production. A separate recording-failure case terminates the runner's own muxer
