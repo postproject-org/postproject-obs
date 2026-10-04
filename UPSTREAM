@@ -1,0 +1,4 @@
+host=OBS-Studio
+version=32.2.2
+url=https://github.com/obsproject/obs-studio.git
+commit=ba2f32bdf791005443988a4955e963663e16b1ed
