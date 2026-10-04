@@ -6,6 +6,9 @@ cleanup compile as C11 in `src/registration.c`. The C++17 shim supplies OBS/Qt
 menus, output notifications and one joined worker. No media-processing loop
 calls PostProject. The host source revision is pinned in `UPSTREAM`.
 
+The [per-target brief](BRIEF.md) records the checked source seam, selection,
+ownership, family targets and acceptance boundary.
+
 ## Record and register
 
 Use **Tools → Create PostProject production…** or **Choose PostProject
