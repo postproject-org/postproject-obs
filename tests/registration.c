@@ -11,7 +11,8 @@ int main(int argc, char **argv) {
   if (select_production(argv[1], 1, &result) != PP_OK ||
       select_production(argv[1], 0, &result) != PP_OK)
     return 3;
-  struct recording attempt = {"/absent/recording.mkv", "test-attempt", "32.2.2", 64, 64};
+  struct recording attempt = {"/absent/recording.mkv", "test-attempt", "32.2.2",
+                              64, 64};
   if (register_recording(argv[1], &attempt, &result) == PP_OK ||
       result.diagnostic[0] == '\0')
     return 4;

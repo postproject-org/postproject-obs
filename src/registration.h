@@ -19,14 +19,16 @@ struct recording {
 struct registration_result {
   pp_uuid_t asset;
   char diagnostic[512];
+  double staging_seconds;
+  double commit_seconds;
 };
 
 pp_error_code_t select_production(const char *path, int create,
-                                 struct registration_result *result);
+                                  struct registration_result *result);
 /* Worker-only: fingerprints the recording, stages facts, and commits. */
 pp_error_code_t register_recording(const char *production_path,
-                                  const struct recording *recording,
-                                  struct registration_result *result);
+                                   const struct recording *recording,
+                                   struct registration_result *result);
 
 #ifdef __cplusplus
 }
