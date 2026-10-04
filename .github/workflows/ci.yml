@@ -1,0 +1,51 @@
+name: Installed C adapter
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      postproject_ref:
+        type: string
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: postproject-org/postproject-obs
+      - uses: actions/checkout@v7
+        with:
+          repository: postproject-org/postproject
+          ref: ${{ inputs.postproject_ref || 'main' }}
+          path: postproject
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: postproject -> target
+      - name: Produce the installed package
+        run: |
+          cargo build --release --locked -p postproject-ffi --manifest-path postproject/Cargo.toml
+          cmake -S postproject -B package \
+            -DPOSTPROJECT_LIBRARY="$PWD/postproject/target/release/libpostproject.so" \
+            -DPOSTPROJECT_STATIC_LIBRARY="$PWD/postproject/target/release/libpostproject.a" \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install"
+          cmake --install package
+      - name: Consume only the install prefix
+        run: |
+          PKG_CONFIG_PATH="$PWD/install/lib/pkgconfig" \
+            cmake -S . -B build -DBUILD_OBS_PLUGIN=OFF
+          cmake --build build
+          POSTPROJECT_ABI_TRACE="$PWD/obs-contract.txt" \
+            ctest --test-dir build --output-on-failure
+      - uses: actions/upload-artifact@v6
+        with:
+          name: obs-c-contract
+          path: obs-contract.txt
+          if-no-files-found: error
