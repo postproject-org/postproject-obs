@@ -25,7 +25,10 @@ the SQLite commit calls and runs off capture/encode callbacks.
 
 Import returns an asset ID. Its committed representation is then read back
 through public APIs and a second atomic transaction records the observed capture
-activity. Zero represented inputs honestly model unknown live devices; the
+activity. Readback selects a unique original single-resource representation,
+so a proxy added between commits cannot become the capture output. More than
+256 representations or an ambiguous original is reported for explicit review.
+Zero represented inputs honestly model unknown live devices; the
 recording representation is its output. No exact input snapshot or job claim
 is invented. If activity registration fails, the already imported media remains
 and the same attempt can complete that second fact on retry.

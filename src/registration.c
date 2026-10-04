@@ -171,9 +171,30 @@ pp_error_code_t register_recording(const char *production_path,
   pp_representation_kind_t kind = 0;
   pp_content_structure_kind_t structure = 0;
   uint64_t members = 0, resources = 0, fingerprints = 0;
-  CHECK(pp_representation_set_get(representations, 0, &representation, &asset,
-                                  &kind, &structure, &members, &resources,
-                                  &fingerprints, &error));
+  const size_t representation_count = pp_representation_set_count(representations);
+  size_t originals = 0;
+  if (representation_count > 256) {
+    status = PP_ERROR_CONFLICT;
+    goto cleanup;
+  }
+  for (size_t index = 0; index < representation_count; ++index) {
+    pp_uuid_t candidate = {0};
+    CHECK(pp_representation_set_get(representations, index, &candidate, &asset,
+                                    &kind, &structure, &members, &resources,
+                                    &fingerprints, &error));
+    if (kind == PP_REPRESENTATION_ORIGINAL) {
+      ++originals;
+      if (structure != PP_CONTENT_SINGLE_RESOURCE) {
+        status = PP_ERROR_CONFLICT;
+        goto cleanup;
+      }
+      representation = candidate;
+    }
+  }
+  if (originals != 1) {
+    status = PP_ERROR_CONFLICT;
+    goto cleanup;
+  }
   const double staging_started = now();
   CHECK(pp_production_begin_transaction(production, &transaction, &error));
   transaction_open = 1;

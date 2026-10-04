@@ -40,4 +40,10 @@ if(BUILD_TESTING)
   add_test(NAME registration COMMAND registration-test
       "${CMAKE_CURRENT_BINARY_DIR}/registration.pproj"
       "${CMAKE_CURRENT_BINARY_DIR}/fixture.media")
+  add_executable(readback-test tests/readback.c)
+  target_link_libraries(readback-test PRIVATE registration)
+  target_compile_options(readback-test PRIVATE -Wall -Wextra -Wpedantic -Werror)
+  add_test(NAME capture-readback COMMAND readback-test
+      "${CMAKE_CURRENT_BINARY_DIR}/readback.pproj"
+      "${CMAKE_CURRENT_BINARY_DIR}/fixture.media")
 endif()
