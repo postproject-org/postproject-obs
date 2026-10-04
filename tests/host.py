@@ -54,7 +54,7 @@ environment = os.environ | {
     "XDG_CONFIG_HOME": str(root / "config"),
     "POSTPROJECT_OBS_PRODUCTION": str(root / "shared.pproj"),
     "POSTPROJECT_OBS_CREATE": "1",
-    "POSTPROJECT_ABI_TRACE": str(root / "obs-normal.txt"),
+    "POSTPROJECT_ABI_TRACE": str(root / f"obs-{args.mode}.txt"),
     "QT_QPA_PLATFORM": "xcb",
     "LIBGL_ALWAYS_SOFTWARE": "1",
     "POSTPROJECT_OBS_TEST_MODE": args.mode,

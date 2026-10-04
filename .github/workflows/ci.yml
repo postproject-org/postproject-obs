@@ -44,8 +44,25 @@ jobs:
           cmake --build build
           POSTPROJECT_ABI_TRACE="$PWD/obs-contract.txt" \
             ctest --test-dir build --output-on-failure
+      - name: Record trace provenance
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib, subprocess, tomllib
+          def revision(directory):
+              return subprocess.check_output(["git", "-C", directory, "rev-parse", "HEAD"], text=True).strip()
+          package = tomllib.loads(pathlib.Path("postproject/Cargo.toml").read_text())["workspace"]["package"]["version"]
+          library = pathlib.Path("install/lib/libpostproject.so")
+          pathlib.Path("obs-contract.json").write_text(json.dumps({
+              "host": "obs", "scenario": "installed adapter contract", "kind": "contract-test",
+              "adapter_commit": revision("."), "postproject_commit": revision("postproject"),
+              "package": package, "library_sha256": hashlib.sha256(library.read_bytes()).hexdigest(),
+              "trace": "obs-contract.txt"
+          }, indent=2) + "\n")
+          PY
       - uses: actions/upload-artifact@v6
         with:
           name: obs-c-contract
-          path: obs-contract.txt
+          path: |
+            obs-contract.txt
+            obs-contract.json
           if-no-files-found: error
