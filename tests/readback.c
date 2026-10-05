@@ -44,6 +44,9 @@ int main(int argc, char **argv) {
   const struct recording attempt = {argv[2], "first-stage-committed", "32.2.2", 64, 64};
   struct registration_result registered;
   if (register_recording(argv[1], &attempt, &registered) != PP_OK) goto cleanup;
+  if (registered.commit_count != 1 ||
+      registered.commits[0].outcome != PP_COMMIT_REVISION_CREATED ||
+      registered.commits[0].revision_sequence != 3) goto cleanup;
   CHECK(pp_production_activities_producing(production, &original, &activities, &error));
   if (pp_activity_set_count(activities) != 1) goto cleanup;
   pp_activity_set_release(activities);

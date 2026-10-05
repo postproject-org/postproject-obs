@@ -29,10 +29,20 @@ int main(int argc, char **argv) {
     return 5;
   }
   const pp_uuid_t first = result.asset;
+  if (result.commit_count != 2 ||
+      result.commits[0].outcome != PP_COMMIT_REVISION_CREATED ||
+      result.commits[1].outcome != PP_COMMIT_REVISION_CREATED ||
+      result.commits[0].revision_sequence != 1 ||
+      result.commits[1].revision_sequence != 2 ||
+      memcmp(result.production.bytes, selected.bytes, sizeof selected.bytes) != 0 ||
+      memcmp(result.commits[0].production_id.bytes, selected.bytes,
+             sizeof selected.bytes) != 0)
+    return 8;
   for (int retry = 0; retry != 2; ++retry) {
     /* Includes commit succeeded but caller discarded the acknowledgement. */
     if (register_recording(argv[1], &attempt, &result) != PP_OK ||
-        memcmp(first.bytes, result.asset.bytes, sizeof(first.bytes)) != 0)
+        memcmp(first.bytes, result.asset.bytes, sizeof(first.bytes)) != 0 ||
+        result.commit_count != 0)
       return 6;
   }
   pp_production_t *production = NULL;

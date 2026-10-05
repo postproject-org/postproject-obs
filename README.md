@@ -37,6 +37,9 @@ Zero represented inputs honestly model unknown live devices; the
 recording representation is its output. No exact input snapshot or job claim
 is invented. If activity registration fails, the already imported media remains
 and the same attempt can complete that second fact on retry.
+Each phase reads one coherent view and carries its detached base into the edit.
+Views close before fingerprinting or commit. Successful commits return their
+own receipts; an already registered retry returns no new commit receipt.
 
 **Tools → PostProject status / retry…** shows the last result and explicitly
 retries the latest retained attempt. Both the media and capture facts have

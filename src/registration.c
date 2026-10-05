@@ -22,7 +22,11 @@ static pp_error_code_t commit(pp_transaction_t *transaction,
                               struct registration_result *result,
                               pp_error_t **error) {
   double start = now();
-  pp_error_code_t status = pp_transaction_commit(transaction, error);
+  pp_commit_receipt_t receipt;
+  pp_error_code_t status =
+      pp_transaction_commit_with_receipt(transaction, &receipt, error);
+  if (status == PP_OK)
+    result->commits[result->commit_count++] = receipt;
   result->commit_seconds += elapsed(start);
   return status;
 }
@@ -52,14 +56,14 @@ pp_error_code_t select_production(const char *path, int create,
   return status;
 }
 
-static pp_error_code_t find_attempt(pp_production_t *production,
+static pp_error_code_t find_attempt(const pp_read_session_t *view,
                                     const char *attempt, const char *qualifier,
                                     pp_object_kind_t kind, pp_uuid_t *id,
                                     int *found, pp_error_t **error) {
   pp_object_ref_set_t *matches = NULL;
   *found = 0;
-  pp_error_code_t status = pp_production_find_by_external_identifier(
-      production, scheme, attempt, qualifier, &matches, error);
+  pp_error_code_t status = pp_read_session_find_by_external_identifier(
+      view, scheme, attempt, qualifier, &matches, error);
   if (status == PP_OK) {
     uint64_t count = pp_object_ref_set_count(matches);
     if (count > 1) {
@@ -105,6 +109,8 @@ pp_error_code_t register_recording(const char *production_path,
                                    const struct recording *recording,
                                    struct registration_result *result) {
   pp_production_t *production = NULL;
+  pp_read_session_t *view = NULL;
+  pp_decision_base_t base;
   pp_transaction_t *transaction = NULL;
   pp_media_source_t *source = NULL;
   pp_representation_set_t *representations = NULL;
@@ -115,11 +121,15 @@ pp_error_code_t register_recording(const char *production_path,
   int found = 0;
   memset(result, 0, sizeof(*result));
   CHECK(pp_production_open(production_path, &production, &error));
-  CHECK(find_attempt(production, recording->attempt, "media", PP_OBJECT_ASSET,
+  CHECK(pp_production_id(production, &result->production, &error));
+  CHECK(pp_production_read_session(production, &view, &error));
+  CHECK(find_attempt(view, recording->attempt, "media", PP_OBJECT_ASSET,
                      &result->asset, &found, &error));
+  CHECK(pp_read_session_decision_base(view, &base, &error));
+  pp_read_session_release(view); view = NULL;
   if (!found) {
     const double staging_started = now();
-    CHECK(pp_production_begin_transaction(production, &transaction, &error));
+    CHECK(pp_production_begin_edit(production, &base, &transaction, &error));
     transaction_open = 1;
     CHECK(pp_transaction_set_revision_context(
         transaction, "org.obsproject.Studio", recording->obs_version, NULL,
@@ -144,7 +154,8 @@ pp_error_code_t register_recording(const char *production_path,
   /* Import returns the asset ID; its representation is visible after commit.
    * Capture provenance is a second atomic fact, retried by its own identifier.
    */
-  CHECK(pp_production_asset(production, &result->asset, &assets, &error));
+  CHECK(pp_production_read_session(production, &view, &error));
+  CHECK(pp_read_session_asset(view, &result->asset, &assets, &error));
   if (pp_asset_set_count(assets) != 1) {
     status = PP_ERROR_CONFLICT;
     goto cleanup;
@@ -160,12 +171,12 @@ pp_error_code_t register_recording(const char *production_path,
     goto cleanup;
   }
   pp_uuid_t activity_id = {0};
-  CHECK(find_attempt(production, recording->attempt, "capture",
+  CHECK(find_attempt(view, recording->attempt, "capture",
                      PP_OBJECT_ACTIVITY, &activity_id, &found, &error));
   if (found)
     goto cleanup;
-  CHECK(pp_production_representations(production, &result->asset,
-                                      &representations, &error));
+  CHECK(pp_read_session_representations_page(view, &result->asset, 256, NULL,
+                                              &representations, &error));
   pp_uuid_t representation = {0};
   pp_uuid_t asset = {0};
   pp_representation_kind_t kind = 0;
@@ -173,7 +184,8 @@ pp_error_code_t register_recording(const char *production_path,
   uint64_t members = 0, resources = 0, fingerprints = 0;
   const size_t representation_count = pp_representation_set_count(representations);
   size_t originals = 0;
-  if (representation_count > 256) {
+  if (representation_count > 256 ||
+      pp_representation_set_next_cursor(representations) != NULL) {
     status = PP_ERROR_CONFLICT;
     goto cleanup;
   }
@@ -195,8 +207,10 @@ pp_error_code_t register_recording(const char *production_path,
     status = PP_ERROR_CONFLICT;
     goto cleanup;
   }
+  CHECK(pp_read_session_decision_base(view, &base, &error));
+  pp_read_session_release(view); view = NULL;
   const double staging_started = now();
-  CHECK(pp_production_begin_transaction(production, &transaction, &error));
+  CHECK(pp_production_begin_edit(production, &base, &transaction, &error));
   transaction_open = 1;
   CHECK(pp_transaction_set_revision_context(
       transaction, "org.obsproject.Studio", recording->obs_version, NULL,
@@ -228,5 +242,6 @@ cleanup:
   pp_representation_set_release(representations);
   pp_asset_set_release(assets);
   pp_production_release(production);
+  pp_read_session_release(view);
   return status;
 }
