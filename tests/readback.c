@@ -14,7 +14,8 @@ int main(int argc, char **argv) {
   pp_activity_set_t *activities = NULL;
   pp_error_t *error = NULL;
   int result = 1;
-  pp_uuid_t asset, original, proxy, owner;
+  pp_asset_id_t asset, owner;
+  pp_uuid_t original, proxy;
   pp_representation_kind_t kind;
   pp_content_structure_kind_t structure;
   uint64_t members, resources, fingerprints;
@@ -22,13 +23,14 @@ int main(int argc, char **argv) {
   CHECK(pp_production_begin_transaction(production, &transaction, &error));
   CHECK(pp_media_source_create_file(argv[2], &source, &error));
   CHECK(pp_transaction_import_media(transaction, source, NULL, &asset, &error));
-  const pp_object_ref_t target = {PP_OBJECT_ASSET, asset};
+  pp_object_ref_t target;
+  CHECK(pp_object_ref_from_asset(asset, &target, &error));
   CHECK(pp_transaction_add_external_identifier(transaction, &target,
       "org.obsproject.Studio:recording-attempt", "first-stage-committed", "media", &error));
   CHECK(pp_transaction_commit(transaction, &error));
   pp_transaction_release(transaction);
   transaction = NULL;
-  CHECK(pp_production_representations(production, &asset, &representations, &error));
+  CHECK(pp_production_representations(production, asset, &representations, &error));
   CHECK(pp_representation_set_get(representations, 0, &original, &owner, &kind,
                                   &structure, &members, &resources, &fingerprints, &error));
   pp_representation_set_release(representations);
@@ -36,7 +38,7 @@ int main(int argc, char **argv) {
   /* Another writer can add a proxy between the two registration commits.
    * Set order does not identify which representation OBS actually captured. */
   CHECK(pp_production_begin_transaction(production, &transaction, &error));
-  CHECK(pp_transaction_add_representation(transaction, &asset, PP_REPRESENTATION_PROXY,
+  CHECK(pp_transaction_add_representation(transaction, asset, PP_REPRESENTATION_PROXY,
                                           source, &proxy, &error));
   CHECK(pp_transaction_commit(transaction, &error));
   pp_transaction_release(transaction);

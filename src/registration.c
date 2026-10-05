@@ -58,7 +58,7 @@ pp_error_code_t select_production(const char *path, int create,
 
 static pp_error_code_t find_attempt(const pp_read_session_t *view,
                                     const char *attempt, const char *qualifier,
-                                    pp_object_kind_t kind, pp_uuid_t *id,
+                                    pp_object_kind_t kind, pp_object_ref_t *out_target,
                                     int *found, pp_error_t **error) {
   pp_object_ref_set_t *matches = NULL;
   *found = 0;
@@ -74,7 +74,7 @@ static pp_error_code_t find_attempt(const pp_read_session_t *view,
       if (status == PP_OK && target.kind != kind)
         status = PP_ERROR_CONFLICT;
       if (status == PP_OK) {
-        *id = target.id;
+        *out_target = target;
         *found = 1;
       }
     }
@@ -119,12 +119,14 @@ pp_error_code_t register_recording(const char *production_path,
   pp_error_code_t status = PP_OK;
   int transaction_open = 0;
   int found = 0;
+  pp_object_ref_t attempt_target;
   memset(result, 0, sizeof(*result));
   CHECK(pp_production_open(production_path, &production, &error));
   CHECK(pp_production_id(production, &result->production, &error));
   CHECK(pp_production_read_session(production, &view, &error));
   CHECK(find_attempt(view, recording->attempt, "media", PP_OBJECT_ASSET,
-                     &result->asset, &found, &error));
+                     &attempt_target, &found, &error));
+  if (found) CHECK(pp_object_ref_get_asset(&attempt_target, &result->asset, &error));
   CHECK(pp_read_session_decision_base(view, &base, &error));
   pp_read_session_release(view); view = NULL;
   if (!found) {
@@ -137,7 +139,8 @@ pp_error_code_t register_recording(const char *production_path,
     CHECK(pp_media_source_create_file(recording->path, &source, &error));
     CHECK(pp_transaction_import_media(transaction, source, NULL, &result->asset,
                                       &error));
-    const pp_object_ref_t target = {PP_OBJECT_ASSET, result->asset};
+    pp_object_ref_t target;
+    CHECK(pp_object_ref_from_asset(result->asset, &target, &error));
     CHECK(pp_transaction_add_external_identifier(
         transaction, &target, scheme, recording->attempt, "media", &error));
     CHECK(add_number(transaction, &target, "video_width", recording->width,
@@ -155,12 +158,12 @@ pp_error_code_t register_recording(const char *production_path,
    * Capture provenance is a second atomic fact, retried by its own identifier.
    */
   CHECK(pp_production_read_session(production, &view, &error));
-  CHECK(pp_read_session_asset(view, &result->asset, &assets, &error));
+  CHECK(pp_read_session_asset(view, result->asset, &assets, &error));
   if (pp_asset_set_count(assets) != 1) {
     status = PP_ERROR_CONFLICT;
     goto cleanup;
   }
-  pp_uuid_t read_id = {0};
+  pp_asset_id_t read_id = {0};
   int64_t created_at = 0;
   const char *name = NULL;
   const char *import_source = NULL;
@@ -172,13 +175,13 @@ pp_error_code_t register_recording(const char *production_path,
   }
   pp_uuid_t activity_id = {0};
   CHECK(find_attempt(view, recording->attempt, "capture",
-                     PP_OBJECT_ACTIVITY, &activity_id, &found, &error));
+                     PP_OBJECT_ACTIVITY, &attempt_target, &found, &error));
   if (found)
     goto cleanup;
-  CHECK(pp_read_session_representations_page(view, &result->asset, 256, NULL,
+  CHECK(pp_read_session_representations_page(view, result->asset, 256, NULL,
                                               &representations, &error));
   pp_uuid_t representation = {0};
-  pp_uuid_t asset = {0};
+  pp_asset_id_t asset = {0};
   pp_representation_kind_t kind = 0;
   pp_content_structure_kind_t structure = 0;
   uint64_t members = 0, resources = 0, fingerprints = 0;

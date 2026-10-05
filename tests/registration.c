@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "%s\n", result.diagnostic);
     return 5;
   }
-  const pp_uuid_t first = result.asset;
+  const pp_asset_id_t first = result.asset;
   if (result.commit_count != 2 ||
       result.commits[0].outcome != PP_COMMIT_REVISION_CREATED ||
       result.commits[1].outcome != PP_COMMIT_REVISION_CREATED ||

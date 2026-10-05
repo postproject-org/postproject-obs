@@ -18,7 +18,7 @@ struct recording {
 
 struct registration_result {
   pp_production_id_t production;
-  pp_uuid_t asset;
+  pp_asset_id_t asset;
   /* Receipts for this call's commits only; retry reads may make no commit. */
   uint32_t commit_count;
   pp_commit_receipt_t commits[2];
