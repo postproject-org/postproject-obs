@@ -8,8 +8,14 @@ int main(int argc, char **argv) {
     return 2;
   remove(argv[1]);
   struct registration_result result = {0};
-  if (select_production(argv[1], 1, &result) != PP_OK ||
-      select_production(argv[1], 0, &result) != PP_OK)
+  if (select_production(argv[1], 1, &result) != PP_OK)
+    return 3;
+  const pp_production_id_t selected = result.production;
+  if (select_production(argv[1], 0, &result) != PP_OK ||
+      memcmp(selected.bytes, result.production.bytes, sizeof selected.bytes) != 0)
+    return 3;
+  const unsigned char zero[16] = {0};
+  if (memcmp(result.asset.bytes, zero, sizeof zero) != 0)
     return 3;
   struct recording attempt = {"/absent/recording.mkv", "test-attempt", "32.2.2",
                               64, 64};

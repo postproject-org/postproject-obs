@@ -17,6 +17,7 @@ struct recording {
 };
 
 struct registration_result {
+  pp_production_id_t production;
   pp_uuid_t asset;
   char diagnostic[512];
   double staging_seconds;

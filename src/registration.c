@@ -44,7 +44,7 @@ pp_error_code_t select_production(const char *path, int create,
       create ? pp_production_create(path, "OBS recordings", &production, &error)
              : pp_production_open(path, &production, &error);
   if (status == PP_OK)
-    status = pp_production_id(production, &result->asset, &error);
+    status = pp_production_id(production, &result->production, &error);
   if (status != PP_OK)
     diagnostic(result, error, "Could not select production");
   pp_error_release(error);
