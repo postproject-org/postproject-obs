@@ -1,7 +1,7 @@
 # PostProject finalized-recording pilot for OBS Studio
 
 An optional frontend plugin for **OBS Studio 32.2.2** and installed
-**PostProject 0.7.0-alpha.1 development SDK** (C ABI 41, schema 17). All PostProject calls and
+**PostProject 0.7.0-alpha.1 development SDK** (C ABI 42, schema 17). All PostProject calls and
 cleanup compile as C11 in `src/registration.c`. The C++17 shim supplies OBS/Qt
 menus, output notifications and one joined worker. No media-processing loop
 calls PostProject. The host source revision is pinned in `UPSTREAM`.
