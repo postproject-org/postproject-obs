@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
   pp_error_t *error = NULL;
   int result = 1;
   pp_asset_id_t asset, owner;
-  pp_uuid_t original, proxy;
+  pp_representation_id_t original, proxy;
   pp_representation_kind_t kind;
   pp_content_structure_kind_t structure;
   uint64_t members, resources, fingerprints;
@@ -49,11 +49,11 @@ int main(int argc, char **argv) {
   if (registered.commit_count != 1 ||
       registered.commits[0].outcome != PP_COMMIT_REVISION_CREATED ||
       registered.commits[0].revision_sequence != 3) goto cleanup;
-  CHECK(pp_production_activities_producing(production, &original, &activities, &error));
+  CHECK(pp_production_activities_producing(production, original, &activities, &error));
   if (pp_activity_set_count(activities) != 1) goto cleanup;
   pp_activity_set_release(activities);
   activities = NULL;
-  CHECK(pp_production_activities_producing(production, &proxy, &activities, &error));
+  CHECK(pp_production_activities_producing(production, proxy, &activities, &error));
   if (pp_activity_set_count(activities) != 0) goto cleanup;
   result = 0;
 cleanup:

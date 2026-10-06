@@ -180,7 +180,7 @@ pp_error_code_t register_recording(const char *production_path,
     goto cleanup;
   CHECK(pp_read_session_representations_page(view, result->asset, 256, NULL,
                                               &representations, &error));
-  pp_uuid_t representation = {0};
+  pp_representation_id_t representation = {0};
   pp_asset_id_t asset = {0};
   pp_representation_kind_t kind = 0;
   pp_content_structure_kind_t structure = 0;
@@ -193,7 +193,7 @@ pp_error_code_t register_recording(const char *production_path,
     goto cleanup;
   }
   for (size_t index = 0; index < representation_count; ++index) {
-    pp_uuid_t candidate = {0};
+    pp_representation_id_t candidate = {0};
     CHECK(pp_representation_set_get(representations, index, &candidate, &asset,
                                     &kind, &structure, &members, &resources,
                                     &fingerprints, &error));
