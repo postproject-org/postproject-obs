@@ -173,7 +173,7 @@ pp_error_code_t register_recording(const char *production_path,
     status = PP_ERROR_CONFLICT;
     goto cleanup;
   }
-  pp_uuid_t activity_id = {0};
+  pp_activity_id_t activity_id = {0};
   CHECK(find_attempt(view, recording->attempt, "capture",
                      PP_OBJECT_ACTIVITY, &attempt_target, &found, &error));
   if (found)
@@ -223,7 +223,8 @@ pp_error_code_t register_recording(const char *production_path,
       transaction, "org.obsproject.Studio:capture", NULL, 0, &output, 1, NULL,
       NULL, "OBS Studio", recording->obs_version, "https://obsproject.com/",
       NULL, NULL, NULL, NULL, &activity_id, &error));
-  const pp_object_ref_t activity = {PP_OBJECT_ACTIVITY, activity_id};
+  pp_object_ref_t activity;
+  CHECK(pp_object_ref_from_activity(activity_id, &activity, &error));
   CHECK(pp_transaction_add_external_identifier(
       transaction, &activity, scheme, recording->attempt, "capture", &error));
   transaction_open = 0;
