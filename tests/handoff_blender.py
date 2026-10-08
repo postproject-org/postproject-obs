@@ -37,10 +37,10 @@ with pp.Production.open(root / "shared.pproj") as production:
     assert any(
         identifier.qualifier == "org.blender:strip_uuid"
         and identifier.value == strip_uuid
-        for identifier in production.external_identifiers[adopted.id]
+        for identifier in production.external_identifiers[pp.AssetRef(adopted.id)]
     )
     assert len(production.activities_producing[original_representation.id]) == 1
-    properties = {item.property.property for item in production.metadata[adopted.id]}
+    properties = {item.property.property for item in production.metadata[pp.AssetRef(adopted.id)]}
     assert {"video_width", "video_height"} <= properties
 
 (root / "moved").mkdir()
