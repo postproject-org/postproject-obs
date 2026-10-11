@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
   remove(argv[1]); /* Dedicated CTest fixture. */
   pp_production_t *production = NULL;
   pp_transaction_t *transaction = NULL;
-  pp_media_source_t *source = NULL;
+  pp_commit_receipt_t receipt = {0};
   pp_representation_set_t *representations = NULL;
   pp_activity_set_t *activities = NULL;
   pp_error_t *error = NULL;
@@ -21,13 +21,12 @@ int main(int argc, char **argv) {
   uint64_t members, resources, fingerprints;
   CHECK(pp_production_create(argv[1], "Readback recipe", &production, &error));
   CHECK(pp_production_begin_transaction(production, &transaction, &error));
-  CHECK(pp_media_source_create_file(argv[2], &source, &error));
-  CHECK(pp_transaction_import_media(transaction, source, NULL, &asset, &error));
+  CHECK(pp_transaction_import_file(transaction, argv[2], NULL, &asset, &error));
   pp_object_ref_t target;
   CHECK(pp_object_ref_from_asset(asset, &target, &error));
   CHECK(pp_transaction_add_external_identifier(transaction, &target,
       "org.obsproject.Studio:recording-attempt", "first-stage-committed", "media", &error));
-  CHECK(pp_transaction_commit(transaction, &error));
+  CHECK(pp_transaction_commit(transaction, &receipt, &error));
   pp_transaction_release(transaction);
   transaction = NULL;
   CHECK(pp_production_representations(production, asset, &representations, &error));
@@ -38,9 +37,9 @@ int main(int argc, char **argv) {
   /* Another writer can add a proxy between the two registration commits.
    * Set order does not identify which representation OBS actually captured. */
   CHECK(pp_production_begin_transaction(production, &transaction, &error));
-  CHECK(pp_transaction_add_representation(transaction, asset, PP_REPRESENTATION_PROXY,
-                                          source, &proxy, &error));
-  CHECK(pp_transaction_commit(transaction, &error));
+  CHECK(pp_transaction_add_file_representation(transaction, asset, PP_REPRESENTATION_PROXY,
+                                               argv[2], &proxy, &error));
+  CHECK(pp_transaction_commit(transaction, &receipt, &error));
   pp_transaction_release(transaction);
   transaction = NULL;
   const struct recording attempt = {argv[2], "first-stage-committed", "32.2.2", 64, 64};
@@ -60,7 +59,6 @@ cleanup:
   pp_error_release(error);
   pp_activity_set_release(activities);
   pp_representation_set_release(representations);
-  pp_media_source_release(source);
   pp_transaction_release(transaction);
   pp_production_release(production);
   return result;
