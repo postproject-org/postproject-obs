@@ -24,7 +24,7 @@ static pp_error_code_t commit(pp_transaction_t *transaction,
   double start = now();
   pp_commit_receipt_t receipt;
   pp_error_code_t status =
-      pp_transaction_commit_with_receipt(transaction, &receipt, error);
+      pp_transaction_commit(transaction, &receipt, error);
   if (status == PP_OK)
     result->commits[result->commit_count++] = receipt;
   result->commit_seconds += elapsed(start);
