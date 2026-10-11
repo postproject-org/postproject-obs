@@ -18,7 +18,8 @@ bpy.context.preferences.addons[module].preferences.production_path = str(
 import postproject as pp
 
 with pp.Production.open(root / "shared.pproj") as production:
-    (original_asset,) = tuple(production.assets)
+    with production.read_session() as view:
+        (original_asset,) = tuple(view.assets())
     original_representation = production.representations[original_asset.id][0]
     assert len(production.activities_producing[original_representation.id]) == 1
 
@@ -31,7 +32,8 @@ bpy.ops.wm.save_as_mainfile(filepath=str(project))
 strip = scene.sequence_editor.strips_all["OBS recording"]
 strip_uuid = strip["postproject_uuid"]
 with pp.Production.open(root / "shared.pproj") as production:
-    (adopted,) = tuple(production.assets)
+    with production.read_session() as view:
+        (adopted,) = tuple(view.assets())
     assert adopted.id == original_asset.id
     assert production.representations[adopted.id][0].id == original_representation.id
     assert any(

@@ -143,7 +143,8 @@ if args.mode == "recording-failure":
     with Production.open(
         root / "shared.pproj", library_path=args.library
     ) as production:
-        assert len(production.assets) == 0
+        with production.read_session() as view:
+            assert tuple(view.assets()) == ()
         assert production.latest_revision is None
     print(f"OBS recording failure created no production media: {root}")
     raise SystemExit(0)
@@ -162,11 +163,13 @@ assert "Worker joined before frontend exit boundary" in log
 if args.mode == "retry":
     assert log.count("Recording registered successfully") == 2
 with Production.open(root / "shared.pproj", library_path=args.library) as production:
-    if args.mode in {"failure", "shutdown"} and len(production.assets) == 0:
+    with production.read_session() as view:
+        assets = tuple(view.assets())
+    if args.mode in {"failure", "shutdown"} and not assets:
         print(f"OBS {args.mode} preserved playable media and joined its worker: {root}")
         raise SystemExit(0)
-    assert len(production.assets) == 1
-    asset = next(iter(production.assets)).id
+    assert len(assets) == 1
+    asset = assets[0].id
     representation = production.representations[asset][0]
     assert (
         production.resolutions[asset][0].availability
