@@ -112,7 +112,6 @@ pp_error_code_t register_recording(const char *production_path,
   pp_read_session_t *view = NULL;
   pp_decision_base_t base;
   pp_transaction_t *transaction = NULL;
-  pp_media_source_t *source = NULL;
   pp_representation_set_t *representations = NULL;
   pp_asset_set_t *assets = NULL;
   pp_error_t *error = NULL;
@@ -136,9 +135,7 @@ pp_error_code_t register_recording(const char *production_path,
     CHECK(pp_transaction_set_revision_context(
         transaction, "org.obsproject.Studio", recording->obs_version, NULL,
         "Register finalized recording", &error));
-    CHECK(pp_media_source_create_file(recording->path, &source, &error));
-    CHECK(pp_transaction_import_media(transaction, source, NULL, &result->asset,
-                                      &error));
+    CHECK(pp_transaction_import_file(transaction, recording->path, NULL, &result->asset, &error));
     pp_object_ref_t target;
     CHECK(pp_object_ref_from_asset(result->asset, &target, &error));
     CHECK(pp_transaction_add_external_identifier(
@@ -242,7 +239,6 @@ cleanup:
   }
   pp_error_release(error);
   pp_transaction_release(transaction);
-  pp_media_source_release(source);
   pp_representation_set_release(representations);
   pp_asset_set_release(assets);
   pp_production_release(production);
