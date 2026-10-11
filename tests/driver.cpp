@@ -12,6 +12,21 @@
 
 OBS_DECLARE_MODULE()
 
+static void close_fixture() {
+  // Remove the automation's source while libobs still runs its destroy queue.
+  // Leaving it in the scene races scene destruction with forced source cleanup.
+  obs_source_t *source = obs_frontend_get_current_scene();
+  obs_scene_t *scene = obs_scene_from_source(source);
+  if (scene)
+    obs_scene_enum_items(scene, [](obs_scene_t *, obs_sceneitem_t *item, void *) {
+      obs_sceneitem_remove(item);
+      return true;
+    }, nullptr);
+  obs_source_release(source);
+  obs_wait_for_destroy_queue();
+  static_cast<QWidget *>(obs_frontend_get_main_window())->close();
+}
+
 static void event(obs_frontend_event event, void *) {
   if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING) {
     for (unsigned channel = 1; channel != 6; ++channel)
@@ -71,9 +86,7 @@ static void event(obs_frontend_event event, void *) {
         }
       });
     }
-    QTimer::singleShot(mode == "shutdown" ? 0 : 4000, [] {
-      static_cast<QWidget *>(obs_frontend_get_main_window())->close();
-    });
+    QTimer::singleShot(mode == "shutdown" ? 0 : 4000, close_fixture);
   } else if (event == OBS_FRONTEND_EVENT_EXIT) {
     obs_frontend_remove_event_callback(::event, nullptr);
   }

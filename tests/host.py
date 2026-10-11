@@ -102,24 +102,31 @@ with (root / "xvfb.log").open("w") as xlog:
                                 children.update((task / "children").read_text().split())
                             except FileNotFoundError:
                                 continue  # A host thread finished during inspection.
-                        muxers = [
-                            int(pid)
-                            for pid in children
-                            if "ffmpeg-mux" in Path(f"/proc/{pid}/exe").resolve().name
-                            and any(
-                                fd.resolve().parent == recordings
-                                for fd in Path(f"/proc/{pid}/fd").glob("*")
-                            )
-                        ]
+                        muxers = []
+                        for pid in children:
+                            try:
+                                if "ffmpeg-mux" in Path(
+                                    f"/proc/{pid}/exe"
+                                ).resolve().name and any(
+                                    fd.resolve().parent == recordings
+                                    for fd in Path(f"/proc/{pid}/fd").glob("*")
+                                ):
+                                    muxers.append(int(pid))
+                            except FileNotFoundError:
+                                continue  # A child or descriptor closed during inspection.
                         if muxers:
-                            os.kill(muxers[0], signal.SIGKILL)
+                            try:
+                                os.kill(muxers[0], signal.SIGKILL)
+                            except ProcessLookupError:
+                                continue
                             break
                         if process.poll() is not None:
                             raise RuntimeError("OBS exited before recording failure")
                         time.sleep(0.01)
                     else:
                         raise RuntimeError("Recording muxer did not start")
-                assert process.wait(timeout=45) == 0
+                exit_code = process.wait(timeout=45)
+                assert exit_code == 0, (args.mode, exit_code, root / "obs.log")
             finally:
                 if process.poll() is None:
                     process.kill()
