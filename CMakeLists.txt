@@ -20,6 +20,8 @@ if(BUILD_OBS_PLUGIN)
   find_package(obs-frontend-api REQUIRED CONFIG)
   find_package(Qt6 REQUIRED COMPONENTS Widgets)
   add_library(postproject-obs MODULE src/plugin.cpp src/worker.cpp)
+  # Installed plugins use the host's loader paths, never the build workstation.
+  set_target_properties(postproject-obs PROPERTIES SKIP_BUILD_RPATH TRUE)
   target_compile_features(postproject-obs PRIVATE cxx_std_17)
   target_link_libraries(postproject-obs PRIVATE registration OBS::libobs OBS::obs-frontend-api Qt6::Widgets)
   target_compile_options(postproject-obs PRIVATE -Wall -Wextra -Wpedantic -Werror)
