@@ -1,7 +1,7 @@
 # PostProject finalized-recording pilot for OBS Studio
 
 An optional frontend plugin for **OBS Studio 32.2.2** and installed
-**PostProject 0.8.0-alpha.1 development SDK** (C ABI 52, schema 27). All PostProject calls and
+**PostProject 0.8.0-alpha.1 SDK** (C ABI 52, schema 27). All PostProject calls and
 cleanup compile as C11 in `src/registration.c`. The C++17 shim supplies OBS/Qt
 menus, output notifications and one joined worker. No media-processing loop
 calls PostProject. The host source revision is pinned in `UPSTREAM`.
@@ -111,7 +111,7 @@ The dependency-loss case requires the RPATH-free build shown above.
 and repeated notification/lost acknowledgement. Contract traces are separate
 from real-host normal and failure traces.
 
-With the maintained Blender extension built using the same candidate wheel:
+With the maintained Blender extension built using the same SDK wheel:
 
 ```sh
 BLENDER_USER_RESOURCES=/tmp/obs-blender-profile \
