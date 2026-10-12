@@ -145,3 +145,12 @@ The adapter disconnects and releases its output reference before joining on
 Accepted host/platform scope is the pinned Linux plugin route. Automated tests
 drive a real graphical OBS under Xvfb; they do not claim an interactive human
 pass or upstream endorsement. Sources are GPL-2.0-or-later.
+
+## Distribution policy
+
+Reviewed 2026-10-12: the [OBS forum resource policy](https://obsproject.com/forum/threads/forum-resource-and-ip-policy.178569/)
+does not permit resources written largely with AI coding tools and requires
+disclosure for any tool assistance. Review the policy before requesting a
+forum listing. This experimental repository follows the normal license and
+branding requirements. The pilot is independent of the OBS Project;
+no listing, endorsement or upstream submission is claimed.
