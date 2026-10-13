@@ -135,7 +135,7 @@ pp_error_code_t register_recording(const char *production_path,
     CHECK(pp_transaction_set_revision_context(
         transaction, "org.obsproject.Studio", recording->obs_version, NULL,
         "Register finalized recording", &error));
-    CHECK(pp_transaction_import_file(transaction, recording->path, NULL, &result->asset, &error));
+    CHECK(pp_transaction_import_file(transaction, recording->path, NULL, &result->asset, NULL, &error));
     pp_object_ref_t target;
     CHECK(pp_object_ref_from_asset(result->asset, &target, &error));
     CHECK(pp_transaction_add_external_identifier(

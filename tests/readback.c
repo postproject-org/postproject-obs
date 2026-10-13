@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   uint64_t members, resources, fingerprints;
   CHECK(pp_production_create(argv[1], "Readback recipe", &production, &error));
   CHECK(pp_production_begin_transaction(production, &transaction, &error));
-  CHECK(pp_transaction_import_file(transaction, argv[2], NULL, &asset, &error));
+  CHECK(pp_transaction_import_file(transaction, argv[2], NULL, &asset, NULL, &error));
   pp_object_ref_t target;
   CHECK(pp_object_ref_from_asset(asset, &target, &error));
   CHECK(pp_transaction_add_external_identifier(transaction, &target,
