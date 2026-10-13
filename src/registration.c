@@ -44,6 +44,10 @@ pp_error_code_t select_production(const char *path, int create,
   pp_production_t *production = NULL;
   pp_error_t *error = NULL;
   memset(result, 0, sizeof(*result));
+  if (pp_abi_version() != 55) {
+    diagnostic(result, NULL, "PostProject ABI 55 is required");
+    return PP_ERROR_UNSUPPORTED;
+  }
   pp_error_code_t status =
       create ? pp_production_create(path, "OBS recordings", &production, &error)
              : pp_production_open(path, &production, &error);
@@ -120,6 +124,10 @@ pp_error_code_t register_recording(const char *production_path,
   int found = 0;
   pp_object_ref_t attempt_target;
   memset(result, 0, sizeof(*result));
+  if (pp_abi_version() != 55) {
+    diagnostic(result, NULL, "PostProject ABI 55 is required");
+    return PP_ERROR_UNSUPPORTED;
+  }
   CHECK(pp_production_open(production_path, &production, &error));
   CHECK(pp_production_id(production, &result->production, &error));
   CHECK(pp_production_read_session(production, &view, &error));
@@ -130,11 +138,11 @@ pp_error_code_t register_recording(const char *production_path,
   pp_read_session_release(view); view = NULL;
   if (!found) {
     const double staging_started = now();
-    CHECK(pp_production_begin_edit(production, &base, &transaction, &error));
+    CHECK(pp_production_begin_edit(production, &base,
+      &(pp_edit_context_t){"org.obsproject.Studio", recording->obs_version, NULL,
+                          "Register finalized recording"}, &transaction, &error));
     transaction_open = 1;
-    CHECK(pp_transaction_set_revision_context(
-        transaction, "org.obsproject.Studio", recording->obs_version, NULL,
-        "Register finalized recording", &error));
+
     CHECK(pp_transaction_import_file(transaction, recording->path, NULL, &result->asset, NULL, &error));
     pp_object_ref_t target;
     CHECK(pp_object_ref_from_asset(result->asset, &target, &error));
@@ -210,11 +218,11 @@ pp_error_code_t register_recording(const char *production_path,
   CHECK(pp_read_session_decision_base(view, &base, &error));
   pp_read_session_release(view); view = NULL;
   const double staging_started = now();
-  CHECK(pp_production_begin_edit(production, &base, &transaction, &error));
+  CHECK(pp_production_begin_edit(production, &base,
+      &(pp_edit_context_t){"org.obsproject.Studio", recording->obs_version, NULL,
+                          "Record observed capture"}, &transaction, &error));
   transaction_open = 1;
-  CHECK(pp_transaction_set_revision_context(
-      transaction, "org.obsproject.Studio", recording->obs_version, NULL,
-      "Record observed capture", &error));
+
   const pp_activity_edge_t output = {representation, NULL};
   CHECK(pp_transaction_create_activity(
       transaction, "org.obsproject.Studio:capture", NULL, 0, &output, 1, NULL,

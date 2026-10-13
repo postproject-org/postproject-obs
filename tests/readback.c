@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   pp_content_structure_kind_t structure;
   uint64_t members, resources, fingerprints;
   CHECK(pp_production_create(argv[1], "Readback recipe", &production, &error));
-  CHECK(pp_production_begin_transaction(production, &transaction, &error));
+  CHECK(pp_production_begin_edit(production, NULL, NULL, &transaction, &error));
   CHECK(pp_transaction_import_file(transaction, argv[2], NULL, &asset, NULL, &error));
   pp_object_ref_t target;
   CHECK(pp_object_ref_from_asset(asset, &target, &error));
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   representations = NULL;
   /* Another writer can add a proxy between the two registration commits.
    * Set order does not identify which representation OBS actually captured. */
-  CHECK(pp_production_begin_transaction(production, &transaction, &error));
+  CHECK(pp_production_begin_edit(production, NULL, NULL, &transaction, &error));
   CHECK(pp_transaction_add_file_representation(transaction, asset, PP_REPRESENTATION_PROXY,
                                                argv[2], &proxy, &error));
   CHECK(pp_transaction_commit(transaction, &receipt, &error));
