@@ -1,7 +1,7 @@
 # PostProject finalized-recording pilot for OBS Studio
 
 An optional frontend plugin for **OBS Studio 32.2.2** and installed
-**PostProject 0.9.0-alpha.1 SDK** (C ABI 55, schema 27). All PostProject calls and
+**PostProject 0.9.0-alpha.1 SDK** (C ABI 56, schema 27). All PostProject calls and
 cleanup compile as C11 in `src/registration.c`. The C++17 shim supplies OBS/Qt
 menus, output notifications and one joined worker. No media-processing loop
 calls PostProject. The host source revision is pinned in `UPSTREAM`.
@@ -29,15 +29,13 @@ records a qualified OBS attempt identifier, width/height metadata and revision
 origin. This staging may perform substantial file I/O; it is separate from
 the SQLite commit calls and runs off capture/encode callbacks.
 
-Import returns an asset ID. Its committed representation is then read back
-through public APIs and a second atomic transaction records the observed capture
-activity. Readback selects a unique original single-resource representation,
-so a proxy added between commits cannot become the capture output. More than
-256 representations or an ambiguous original is reported for explicit review.
-Zero represented inputs honestly model unknown live devices; the
-recording representation is its output. No exact input snapshot or job claim
-is invented. If activity registration fails, the already imported media remains
-and the same attempt can complete that second fact on retry.
+Output registration stages the recording, its capture activity and both qualified
+attempt identifiers in one edit. Zero represented inputs honestly model unknown
+live devices; no exact input snapshot or job claim is invented. Retry returns
+the same identities without another commit. Earlier recordings with only their
+media fact remain repairable: readback selects a unique original single-resource
+representation before recording capture. More than 256 representations or an
+ambiguous original is reported for explicit review.
 Each phase reads one coherent view and carries its detached base into the edit.
 Views close before fingerprinting or commit. Successful commits return their
 own receipts; an already registered retry returns no new commit receipt.

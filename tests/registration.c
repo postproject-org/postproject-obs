@@ -29,11 +29,9 @@ int main(int argc, char **argv) {
     return 5;
   }
   const pp_asset_id_t first = result.asset;
-  if (result.commit_count != 2 ||
+  if (result.commit_count != 1 ||
       result.commits[0].outcome != PP_COMMIT_REVISION_CREATED ||
-      result.commits[1].outcome != PP_COMMIT_REVISION_CREATED ||
       result.commits[0].revision_sequence != 1 ||
-      result.commits[1].revision_sequence != 2 ||
       memcmp(result.production.bytes, selected.bytes, sizeof selected.bytes) != 0 ||
       memcmp(result.commits[0].production_id.bytes, selected.bytes,
              sizeof selected.bytes) != 0)

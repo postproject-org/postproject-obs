@@ -44,8 +44,8 @@ pp_error_code_t select_production(const char *path, int create,
   pp_production_t *production = NULL;
   pp_error_t *error = NULL;
   memset(result, 0, sizeof(*result));
-  if (pp_abi_version() != 55) {
-    diagnostic(result, NULL, "PostProject ABI 55 is required");
+  if (pp_abi_version() != PP_ABI_VERSION) {
+    diagnostic(result, NULL, "PostProject header/library ABI mismatch");
     return PP_ERROR_UNSUPPORTED;
   }
   pp_error_code_t status =
@@ -124,8 +124,8 @@ pp_error_code_t register_recording(const char *production_path,
   int found = 0;
   pp_object_ref_t attempt_target;
   memset(result, 0, sizeof(*result));
-  if (pp_abi_version() != 55) {
-    diagnostic(result, NULL, "PostProject ABI 55 is required");
+  if (pp_abi_version() != PP_ABI_VERSION) {
+    diagnostic(result, NULL, "PostProject header/library ABI mismatch");
     return PP_ERROR_UNSUPPORTED;
   }
   CHECK(pp_production_open(production_path, &production, &error));
@@ -143,7 +143,18 @@ pp_error_code_t register_recording(const char *production_path,
                           "Register finalized recording"}, &transaction, &error));
     transaction_open = 1;
 
-    CHECK(pp_transaction_import_file(transaction, recording->path, NULL, &result->asset, NULL, &error));
+    pp_output_identity_t identity = {0};
+    pp_activity_id_t activity_id = {0};
+    const pp_output_source_t source = {
+        NULL, PP_REPRESENTATION_ORIGINAL, recording->path, NULL, NULL, NULL};
+    const pp_activity_recipe_t recipe = {
+        .kind = "org.obsproject.Studio:capture",
+        .tool_name = "OBS Studio",
+        .tool_version = recording->obs_version,
+        .tool_uri = "https://obsproject.com/"};
+    CHECK(pp_transaction_register_outputs(transaction, &source, 1, &recipe,
+                                           &identity, &activity_id, &error));
+    result->asset = identity.asset_id;
     pp_object_ref_t target;
     CHECK(pp_object_ref_from_asset(result->asset, &target, &error));
     CHECK(pp_transaction_add_external_identifier(
@@ -152,16 +163,20 @@ pp_error_code_t register_recording(const char *production_path,
                      &error));
     CHECK(add_number(transaction, &target, "video_height", recording->height,
                      &error));
+    pp_object_ref_t activity;
+    CHECK(pp_object_ref_from_activity(activity_id, &activity, &error));
+    CHECK(pp_transaction_add_external_identifier(
+        transaction, &activity, scheme, recording->attempt, "capture", &error));
     transaction_open = 0;
     result->staging_seconds += elapsed(staging_started);
     CHECK(commit(transaction, result, &error));
     pp_transaction_release(transaction);
     transaction = NULL;
+    goto cleanup;
   }
 
-  /* Import returns the asset ID; its representation is visible after commit.
-   * Capture provenance is a second atomic fact, retried by its own identifier.
-   */
+  /* Repair earlier recordings whose media fact committed without capture.
+   * Newly registered recordings publish both attempt identifiers together. */
   CHECK(pp_production_read_session(production, &view, &error));
   CHECK(pp_read_session_asset(view, result->asset, &assets, &error));
   if (pp_asset_set_count(assets) != 1) {
@@ -224,10 +239,9 @@ pp_error_code_t register_recording(const char *production_path,
   transaction_open = 1;
 
   const pp_activity_edge_t output = {representation, NULL};
-  CHECK(pp_transaction_create_activity(
-      transaction, "org.obsproject.Studio:capture", NULL, 0, &output, 1, NULL,
-      NULL, "OBS Studio", recording->obs_version, "https://obsproject.com/",
-      NULL, NULL, NULL, NULL, &activity_id, &error));
+  CHECK(pp_transaction_create_activity(transaction,
+        &(pp_activity_recipe_t){"org.obsproject.Studio:capture", NULL, 0, NULL, NULL, "OBS Studio", recording->obs_version, "https://obsproject.com/", NULL, NULL, NULL, NULL, NULL, 0},
+        &output, 1, &activity_id, &error));
   pp_object_ref_t activity;
   CHECK(pp_object_ref_from_activity(activity_id, &activity, &error));
   CHECK(pp_transaction_add_external_identifier(
