@@ -20,7 +20,11 @@ import postproject as pp
 with pp.Production.open(root / "shared.pproj") as production:
     with production.read_session() as view:
         (original_asset,) = tuple(view.assets())
-    original_representation = production.representations[original_asset.id][0]
+    # This capture fixture starts with exactly one original representation.
+    (original_representation,) = tuple(
+        item for item in production.representations[original_asset.id]
+        if item.kind is pp.RepresentationKind.ORIGINAL
+    )
     assert len(production.activities_producing[original_representation.id]) == 1
 
 (recording,) = tuple((root / "recordings").glob("*.mkv"))
@@ -35,7 +39,7 @@ with pp.Production.open(root / "shared.pproj") as production:
     with production.read_session() as view:
         (adopted,) = tuple(view.assets())
     assert adopted.id == original_asset.id
-    assert production.representations[adopted.id][0].id == original_representation.id
+    assert production.representation(original_representation.id).asset_id == adopted.id
     assert any(
         identifier.qualifier == "org.blender:strip_uuid"
         and identifier.value == strip_uuid
